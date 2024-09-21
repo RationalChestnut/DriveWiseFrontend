@@ -21,6 +21,9 @@ import { Accelerometer } from "expo-sensors";
 import axios from "axios";
 import Svg, { G, Path } from "react-native-svg";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { getSpeedLimitData } from "../../api/location.api";
+import { ReportAccidentText, ReportContainer } from "./Home.styles";
+import { addAccident, getAccidents } from "../../api/location.api";
 
 const { width, height } = Dimensions.get("window");
 const ASPECT_RATIO = width / height;
@@ -35,7 +38,7 @@ const initialRegion = {
   longitudeDelta: LONGITUDE_DELTA,
 };
 
-const GOOGLE_MAPS_APIKEY = ""; // Replace with your actual API key
+const GOOGLE_MAPS_APIKEY = "AIzaSyDG3GWgklCLXr7HwlsXs5XSTUhkGlwO5Rw"; // Replace with your actual API key
 
 const MapScreen = ({ navigation }) => {
   const [region, setRegion] = useState(initialRegion);
@@ -68,6 +71,9 @@ const MapScreen = ({ navigation }) => {
   const [speed, setSpeed] = useState(0);
   const [speedData, setSpeedData] = useState([]);
   const [accidentCords, setAccidentCoords] = useState([]);
+  const [speedLimitIntervalId, setSpeedLimitIntervalId] = useState(null);
+  const [fullSpeedData, setFullSpeedData] = useState([]);
+  const [reportedAccidents, setReportedAccidents] = useState([]);
 
   const handleRegionChange = (region) => {
     // Assuming that a higher latitudeDelta implies a higher zoom level
@@ -123,7 +129,6 @@ const MapScreen = ({ navigation }) => {
       });
 
       const [location] = await Promise.all([locationPromise, headingPromise]);
-
       const { latitude, longitude } = location.coords;
       setCurrentLocation({ latitude, longitude });
       setStartLocation({ latitude, longitude });
@@ -256,7 +261,7 @@ const MapScreen = ({ navigation }) => {
       const id = setInterval(() => {
         storeData();
       }, 100);
-
+      startPingSpeedLimit();
       setIntervalId(id); // Save the interval ID to clear it later
     }
   };
@@ -268,6 +273,8 @@ const MapScreen = ({ navigation }) => {
       clearInterval(intervalId); // Clear data collection interval
       setIntervalId(null); // Reset the interval ID
     }
+
+    let speedLimitStuff = evaluateSpeedData();
     navigation.navigate("Summary", {
       elapsedTime,
       accelerationData: {
@@ -277,8 +284,11 @@ const MapScreen = ({ navigation }) => {
       },
       speedData,
       ida: 0.75,
+      ...speedLimitStuff,
     });
     setElapsedTime(0);
+
+    stopPingSpeedLimit(intervalId);
   };
 
   const decodePolyline = (encoded) => {
@@ -405,6 +415,112 @@ const MapScreen = ({ navigation }) => {
       console.log(error);
     }
   };
+
+  const PING_INTERVAL = 10000; // 30 seconds in milliseconds
+  const pingSpeedLimit = async () => {
+    let data = await getSpeedLimitData(
+      currentLocation.latitude,
+      currentLocation.longitude
+    );
+
+    if (data) {
+      let milesOver = speed - data;
+      if (milesOver < 0) milesOver = 0;
+      setFullSpeedData((prevData) => [
+        ...prevData,
+        {
+          speed: data,
+          timeStamp: new Date().toISOString(),
+          speedLimit: data,
+          milesOver,
+        },
+      ]);
+    }
+  };
+
+  const evaluateSpeedData = () => {
+    // Sort the data by timeStamp
+    const data = fullSpeedData
+      .slice()
+      .sort((a, b) => new Date(a.timeStamp) - new Date(b.timeStamp));
+
+    let totalTimeSpentSpeeding = 0; // in milliseconds
+    let totalMilesOver = 0; // miles over the limit, weighted by time
+    let totalInfractions = 0;
+    let wasSpeeding = false;
+
+    for (let i = 0; i < data.length - 1; i++) {
+      const currentData = data[i];
+      const nextData = data[i + 1];
+
+      const currentMilesOver = currentData.milesOver;
+      const nextMilesOver = nextData.milesOver;
+
+      const currentTime = new Date(currentData.timeStamp);
+      const nextTime = new Date(nextData.timeStamp);
+
+      const deltaTime = nextTime - currentTime; // in milliseconds
+
+      // Check for infraction (start of speeding)
+      if (currentMilesOver > 0 && !wasSpeeding) {
+        totalInfractions += 1;
+        wasSpeeding = true;
+      } else if (currentMilesOver <= 0 && wasSpeeding) {
+        wasSpeeding = false;
+      }
+
+      // Accumulate time spent speeding and total miles over
+      if (currentMilesOver > 0) {
+        totalTimeSpentSpeeding += deltaTime;
+        totalMilesOver += currentMilesOver * (deltaTime / 1000); // Adjust miles over by time in seconds
+      }
+    }
+
+    // Calculate mean miles over
+    const meanMilesOver =
+      totalTimeSpentSpeeding > 0
+        ? totalMilesOver / (totalTimeSpentSpeeding / 1000)
+        : 0;
+
+    // Convert totalTimeSpentSpeeding to seconds for readability
+    const totalTimeSpentSpeedingSeconds = totalTimeSpentSpeeding / 1000;
+
+    return {
+      totalTimeSpentSpeeding: totalTimeSpentSpeedingSeconds, // in seconds
+      totalInfractions,
+      meanMilesOver,
+    };
+  };
+
+  const startPingSpeedLimit = () => {
+    pingSpeedLimit();
+    const intervalId = setInterval(() => {
+      pingSpeedLimit(); // Call your function here
+    }, PING_INTERVAL);
+
+    setSpeedLimitIntervalId(intervalId); // Save the interval ID to clear it later
+    return intervalId; // Return interval ID to clear it later if needed
+  };
+
+  const stopPingSpeedLimit = (intervalId) => {
+    if (speedLimitIntervalId) {
+      clearInterval(speedLimitIntervalId); // Clear the interval when done
+    }
+  };
+
+  useEffect(() => {
+    const fetchAccidents = async () => {
+      try {
+        let accidentData = await getAccidents();
+        setReportedAccidents(accidentData.accidents);
+      } catch (error) {
+        console.error("Error fetching accident data:", error);
+      }
+    };
+
+    fetchAccidents();
+  }, []);
+
   return (
     <View style={styles.container}>
       {isLoading && (
@@ -466,6 +582,23 @@ const MapScreen = ({ navigation }) => {
             </Marker>
           );
         })}
+        {reportedAccidents.length > 0 &&
+          reportedAccidents &&
+          reportedAccidents.map((coord, index) => {
+            console.log("coord", coord);
+            return (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: coord.lat,
+                  longitude: coord.long,
+                }}
+              >
+                <View style={styles.blueDot} />
+              </Marker>
+            );
+          })}
+
         {routeCoordinates.length > 0 && (
           <Polyline
             coordinates={routeCoordinates}
@@ -553,7 +686,18 @@ const MapScreen = ({ navigation }) => {
           </Text>
         </View>
       )}
-      {dangerScore !== null && (
+      {isActiveRoute && (
+        <ReportContainer
+          onPress={() => {
+            console.log("Run");
+            addAccident(currentLocation.latitude, currentLocation.longitude);
+          }}
+        >
+          <ReportAccidentText>Report Accident</ReportAccidentText>
+        </ReportContainer>
+      )}
+
+      {dangerScore !== null && isActiveRoute && (
         <View style={styles.dangerPopup}>
           <View style={styles.row}>
             <FontAwesome5
@@ -793,6 +937,14 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   redDot: {
+    width: 15,
+    height: 15,
+    backgroundColor: "red",
+    borderRadius: 100, // Half of the width and height to make it a circle
+    borderWidth: 1,
+    borderColor: "#fff",
+  },
+  blueDot: {
     width: 15,
     height: 15,
     backgroundColor: "red",

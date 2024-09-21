@@ -36,6 +36,9 @@ export const Summary = ({ navigation, route }) => {
     accelerationData,
     speedData,
     ida,
+    meanMilesOver,
+    totalInfractions,
+    totalTimeSpentSpeeding,
   } = route?.params || {};
   let stats = 0;
   const { user } = useContext(AuthenticationContext);
@@ -106,12 +109,22 @@ export const Summary = ({ navigation, route }) => {
                 <Text style={styles.statValue}>{streak}</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>Total Trips 🚘</Text>
-                <Text style={styles.statValue}>{totalTrips}</Text>
+                <Text style={styles.statLabel}>Number of Infractions #️⃣</Text>
+                <Text style={styles.statValue}>
+                  {totalInfractions.toFixed(0)}
+                </Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>Total Hours ⏰</Text>
-                <Text style={styles.statValue}>{totalTime}</Text>
+                <Text style={styles.statLabel}>
+                  Total Time Spent Speeding 🕰️
+                </Text>
+                <Text style={styles.statValue}>
+                  {totalTimeSpentSpeeding.toFixed(0)}
+                </Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Mean Miles Over 📏</Text>
+                <Text style={styles.statValue}>{meanMilesOver.toFixed(0)}</Text>
               </View>
             </View>
           </>

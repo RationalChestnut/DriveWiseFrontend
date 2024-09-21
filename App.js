@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { UserContextProvider } from "./src/infra/user.context";
 import { AuthenticationContextProvider } from "./src/infra/auth.context";
 import { Navigator } from "./src/infra/nav/navigator";
+import Toast from "react-native-toast-message";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <UserContextProvider>
               <Navigator />
               <StatusBar backgroundColor="white" />
+              <Toast />
             </UserContextProvider>
           </AuthenticationContextProvider>
         </SafeAreaView>

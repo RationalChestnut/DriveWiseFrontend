@@ -173,7 +173,9 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Total Hours ⏰</Text>
-            <Text style={styles.statValue}>{profileData.stats.totalHours}</Text>
+            <Text style={styles.statValue}>
+              {profileData.stats.totalHours.toFixed(0)}
+            </Text>
           </View>
         </View>
 
