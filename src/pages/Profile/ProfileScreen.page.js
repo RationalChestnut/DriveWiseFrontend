@@ -29,8 +29,8 @@ const ProfileScreen = () => {
   const [celebrate, setCelebrate] = useState(false); // For confetti
 
   const determineLevel = (score) => {
-    if (score <= 50) return "Beginner";
-    else if (score <= 80) return "Amateur";
+    if (score <= 300) return "Beginner";
+    else if (score <= 700) return "Amateur";
     else return "Experienced";
   };
 
@@ -118,7 +118,6 @@ const ProfileScreen = () => {
   }
 
   const { stats, skills, driving_score } = profileData;
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -135,25 +134,17 @@ const ProfileScreen = () => {
           <AnimatedCircularProgress
             size={150}
             width={15}
-            fill={
-              (profileData.stats.totalHours * profileData.stats.totalTrips) /
-              100
-            }
+            fill={driving_score / 10}
             tintColor="#4CAF50"
             backgroundColor="#e0e0e0"
           >
             {(fill) => (
               <View style={styles.circularTextContainer}>
                 <Text style={styles.circularScore}>
-                  {(
-                    profileData.stats.totalHours *
-                      profileData.stats.totalTrips || 0
-                  ).toFixed(0)}
+                  {profileData.driving_score.toFixed(0)}
                 </Text>
                 <Text style={styles.circularSubtitle}>
-                  {determineLevel(
-                    profileData.stats.totalHours * profileData.stats.totalTrips
-                  )}
+                  {determineLevel(profileData.driving_score)}
                 </Text>
               </View>
             )}
