@@ -36,7 +36,7 @@ const initialRegion = {
   longitudeDelta: LONGITUDE_DELTA,
 };
 
-const GOOGLE_MAPS_APIKEY = "AIzaSyAM9wBDTdoZsMKYAWCj-T35R_EnQlkigfg"; // Replace with your actual API key
+const GOOGLE_MAPS_APIKEY = ""; // Replace with your actual API key
 
 const MapScreen = ({ navigation }) => {
   const [region, setRegion] = useState(initialRegion);
