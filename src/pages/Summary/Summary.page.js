@@ -4,17 +4,14 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
 } from "react-native";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
-import * as Progress from "react-native-progress";
 import { AuthenticationContext } from "../../infra/auth.context";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { addNewTrip } from "../../api/user.api";
 
-// Utility function to convert milliseconds to the desired format
 const formatElapsedTime = (ms) => {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -33,24 +30,21 @@ const formatElapsedTime = (ms) => {
 export const Summary = ({ navigation, route }) => {
   const {
     elapsedTime = 25000,
-    accelerationData,
-    speedData,
     ida,
     meanMilesOver,
     totalInfractions,
     totalTimeSpentSpeeding,
+    numberOfSuddenBrakes,
   } = route?.params || {};
-  let stats = 0;
+
   const { user } = useContext(AuthenticationContext);
   const [isLoading, setIsLoading] = useState(true);
-  const [score, setScore] = useState(elapsedTime / 1000 / ida);
-  const [totalTrips, setTotalTrips] = useState(0);
-  const [totalTime, setTotalTime] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [score, setScore] = useState();
+  const [streak, setStreak] = useState(100);
 
   const addTrip = async () => {
     try {
-      let { streak, totalHours, totalTrips } = await addNewTrip(
+      let { streak } = await addNewTrip(
         {
           duration: elapsedTime / 1000,
           time: Date.now(),
@@ -58,9 +52,17 @@ export const Summary = ({ navigation, route }) => {
         user
       );
 
+      let startingScore = 100;
+      startingScore -= meanMilesOver * 0.1;
+      startingScore -= totalInfractions * 3;
+      startingScore -= totalTimeSpentSpeeding * 0.1;
+      startingScore -= numberOfSuddenBrakes * 4;
+      if (startingScore < 0) {
+        startingScore = 0;
+      }
+      setScore(startingScore);
+
       setStreak(streak);
-      setTotalTime(totalHours);
-      setTotalTrips(totalTrips);
     } catch (error) {
       console.log(error);
     }
@@ -89,7 +91,7 @@ export const Summary = ({ navigation, route }) => {
                 size={150}
                 width={15}
                 fill={score}
-                tintColor="#3b5998"
+                tintColor="#4CAF50"
                 backgroundColor="#e0e0e0"
               >
                 {(fill) => (
@@ -126,36 +128,15 @@ export const Summary = ({ navigation, route }) => {
                 <Text style={styles.statLabel}>Mean Miles Over 📏</Text>
                 <Text style={styles.statValue}>{meanMilesOver.toFixed(0)}</Text>
               </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Number of Sudden Brakes 🦥</Text>
+                <Text style={styles.statValue}>{numberOfSuddenBrakes}</Text>
+              </View>
             </View>
           </>
         )}
-
-        {/* <View style={styles.statsContainer}>
-          {renderSkill("CONSISTENCY", 0.7, "#4d79ff")}
-          {renderSkill("Timeliness", 0.65, "#66cc66")}
-        </View> */}
       </ScrollView>
     </SafeAreaView>
-  );
-};
-
-// Function to render each skill with a progress bar
-const renderSkill = (skillName, progress, progressColor) => {
-  return (
-    <View style={styles.skillCard} key={skillName}>
-      <View style={styles.skillRow}>
-        <Text style={styles.skillName}>{skillName} :</Text>
-        <Text style={styles.skillScore}>200</Text>
-      </View>
-      <Progress.Bar
-        progress={progress}
-        width={null}
-        color={progressColor}
-        unfilledColor="#e0e0e0"
-        borderWidth={0}
-        height={10}
-      />
-    </View>
   );
 };
 

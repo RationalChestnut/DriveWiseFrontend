@@ -19,7 +19,19 @@ import { Accelerometer } from "expo-sensors";
 import axios from "axios";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { getSpeedLimitData } from "../../api/location.api";
-import { ReportAccidentText, ReportContainer } from "./Home.styles";
+import {
+  Container,
+  Label,
+  ReportAccidentText,
+  ReportContainer,
+  Row,
+  SafetyModal,
+  SafetyModalCloseIcon,
+  SafetyModalContainer,
+  SafetyModalContents,
+  SafetyModalTitle,
+  UpperRow,
+} from "./Home.styles";
 import { addAccident, getAccidents } from "../../api/location.api";
 
 const { width, height } = Dimensions.get("window");
@@ -78,8 +90,13 @@ const MapScreen = ({ navigation }) => {
   const [route75CoordinatesWithETA, setRoute75CoordinatesWithETA] = useState(
     []
   );
+  const [selectedRouteInfo, setSelectedRouteInfo] = useState({});
+  const [displayRouteDataModal, setDisplayRouteDataModal] = useState(false);
   const [newIntervalForStoringData, setNewIntervalForStoringData] =
     useState(null);
+  const [getRoute75DangerScore, setGetRoute75DangerScore] = useState(null);
+  const [getRoute50DangerScore, setGetRoute50DangerScore] = useState(null);
+  const [numberOfSuddenBrakes, setNumberOfSuddenBrakes] = useState(0);
 
   const handleRegionChange = (region) => {
     const newZoomLevel = Math.log2(360 / region.latitudeDelta);
@@ -102,6 +119,12 @@ const MapScreen = ({ navigation }) => {
 
     const subscription = Accelerometer.addListener(({ x, y, z }) => {
       setData({ x, y, z });
+      let g = 9.81;
+
+      let dist = Math.sqrt(x * x + y * y);
+      if (dist > g) {
+        setNumberOfSuddenBrakes((prev) => prev + 1);
+      }
     });
 
     setAccelerationSubscription(subscription);
@@ -447,6 +470,7 @@ const MapScreen = ({ navigation }) => {
       },
       speedData,
       ida: 0.75,
+      numberOfSuddenBrakes,
       ...speedLimitStuff,
     });
     setElapsedTime(0);
@@ -524,7 +548,9 @@ const MapScreen = ({ navigation }) => {
           driver_skill: 0.5,
         });
 
-        setDangerScore(get75Route.data.metrics[0].danger_score);
+        setDangerScore(getRoute.data.metrics[0].danger_score);
+        setGetRoute75DangerScore(get75Route.data.metrics[0].danger_score);
+        setGetRoute50DangerScore(get50Route.data.metrics[0].danger_score);
 
         const waypoints75 = get75Route.data.waypoints;
         const waypoints50 = get50Route.data.waypoints;
@@ -667,20 +693,51 @@ const MapScreen = ({ navigation }) => {
     fetchAccidents();
   }, []);
 
-  // Expected ETAS:
-  console.log("Expected ETAs:");
-  console.log(
-    "hotpink - most efficent",
-    routeCoordinatesWithETA[routeCoordinatesWithETA.length - 1]
-  );
-  console.log(
-    "blue - 50% efficent",
-    route50CoordinatesWithETA[route50CoordinatesWithETA.length - 1]
-  );
-  console.log(
-    "green - 75% efficent",
-    route75CoordinatesWithETA[route75CoordinatesWithETA.length - 1]
-  );
+  const handlePolylinePress = (routeType) => {
+    let routeInfo;
+
+    if (routeType === "efficient") {
+      routeInfo = {
+        type: "Most Efficient Route",
+        eta: routeCoordinatesWithETA[routeCoordinatesWithETA.length - 1]
+          ?.cumulativeEta,
+        color: "hotpink",
+        dangerScore: dangerScore,
+      };
+    } else if (routeType === "50% efficient") {
+      routeInfo = {
+        type: "50% Efficient Route",
+        eta: route50CoordinatesWithETA[route50CoordinatesWithETA.length - 1]
+          ?.cumulativeEta,
+        color: "blue",
+        dangerScore: getRoute50DangerScore,
+      };
+    } else if (routeType === "75% efficient") {
+      routeInfo = {
+        type: "75% Efficient Route",
+        eta: route75CoordinatesWithETA[route75CoordinatesWithETA.length - 1]
+          ?.cumulativeEta,
+        color: "green",
+        dangerScore: getRoute75DangerScore,
+      };
+    }
+
+    setSelectedRouteInfo(routeInfo);
+    setDisplayRouteDataModal(true);
+  };
+  const formatEta = (etaInSeconds) => {
+    if (!etaInSeconds) return "N/A";
+    const hours = Math.floor(etaInSeconds / 3600);
+    const minutes = Math.floor((etaInSeconds % 3600) / 60);
+    const seconds = Math.floor(etaInSeconds % 60);
+
+    // Pad the minutes and seconds with leading zeros if needed
+    const paddedHours = hours.toString().padStart(2, "0");
+    const paddedMinutes = minutes.toString().padStart(2, "0");
+    const paddedSeconds = seconds.toString().padStart(2, "0");
+
+    return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
+  };
 
   return (
     <View style={styles.container}>
@@ -764,6 +821,10 @@ const MapScreen = ({ navigation }) => {
             coordinates={routeCoordinates}
             strokeWidth={5}
             strokeColor="hotpink"
+            tappable={true}
+            onPress={() => {
+              handlePolylinePress("efficient");
+            }}
           />
         )}
         {route50Coordinates.length > 0 && (
@@ -771,6 +832,8 @@ const MapScreen = ({ navigation }) => {
             coordinates={route50Coordinates}
             strokeWidth={5}
             strokeColor="blue"
+            tappable={true}
+            onPress={() => handlePolylinePress("50% efficient")}
           />
         )}
         {route75Coordinates.length > 0 && (
@@ -778,6 +841,8 @@ const MapScreen = ({ navigation }) => {
             coordinates={route75Coordinates}
             strokeWidth={5}
             strokeColor="green"
+            tappable={true}
+            onPress={() => handlePolylinePress("75% efficient")}
           />
         )}
       </MapView>
@@ -856,23 +921,38 @@ const MapScreen = ({ navigation }) => {
           <ReportAccidentText>Report Accident</ReportAccidentText>
         </ReportContainer>
       )}
-
-      {dangerScore !== null && isActiveRoute && (
-        <View style={styles.dangerPopup}>
-          <View style={styles.row}>
-            <FontAwesome5
-              name="exclamation-triangle"
-              size={24}
-              color={getDangerColor()}
-            />
-            <Text style={styles.dangerText}>Danger Score: {dangerScore}</Text>
-          </View>
-        </View>
-      )}
       {startTracking && startLocation && endLocation && (
         <View style={styles.trackingButton}></View>
       )}
+      <SafetyModal visible={displayRouteDataModal} transparent={true}>
+        <SafetyModalContainer>
+          <SafetyModalContents>
+            <UpperRow>
+              <SafetyModalTitle
+                style={{
+                  color: selectedRouteInfo?.color,
+                }}
+              >
+                {selectedRouteInfo?.type}
+              </SafetyModalTitle>
+              <SafetyModalCloseIcon
+                onPress={() => {
+                  setDisplayRouteDataModal(false);
+                }}
+              />
+            </UpperRow>
 
+            <Row>
+              <Label>ETA ⏰</Label>
+              <Label>{formatEta(selectedRouteInfo?.eta) || 0}</Label>
+            </Row>
+            <Row>
+              <Label>Danger Score ⏰</Label>
+              <Label>{selectedRouteInfo?.dangerScore}</Label>
+            </Row>
+          </SafetyModalContents>
+        </SafetyModalContainer>
+      </SafetyModal>
       <Modal
         visible={loading || suggestedDestination !== null}
         transparent={true}

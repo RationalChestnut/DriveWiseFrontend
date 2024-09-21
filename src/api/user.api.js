@@ -23,7 +23,6 @@ export const getUserData = async (userId) => {
 
 export const addNewTrip = async (trip, userId) => {
   try {
-    console.log("Running addNewTrip req");
     const res = await axios.post(`${route}/user/addTrip`, {
       trip,
       userId,
