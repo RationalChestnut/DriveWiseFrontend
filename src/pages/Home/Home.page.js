@@ -3,11 +3,9 @@ import {
   StyleSheet,
   View,
   Dimensions,
-  Button,
   Text,
   TouchableOpacity,
   Alert,
-  Image,
   Modal,
   ActivityIndicator,
   ScrollView,
@@ -19,7 +17,6 @@ import LottieView from "lottie-react-native";
 import * as Location from "expo-location";
 import { Accelerometer } from "expo-sensors";
 import axios from "axios";
-import Svg, { G, Path } from "react-native-svg";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { getSpeedLimitData } from "../../api/location.api";
 import { ReportAccidentText, ReportContainer } from "./Home.styles";
@@ -74,9 +71,17 @@ const MapScreen = ({ navigation }) => {
   const [speedLimitIntervalId, setSpeedLimitIntervalId] = useState(null);
   const [fullSpeedData, setFullSpeedData] = useState([]);
   const [reportedAccidents, setReportedAccidents] = useState([]);
+  const [routeCoordinatesWithETA, setRouteCoordinatesWithETA] = useState([]);
+  const [route50CoordinatesWithETA, setRoute50CoordinatesWithETA] = useState(
+    []
+  );
+  const [route75CoordinatesWithETA, setRoute75CoordinatesWithETA] = useState(
+    []
+  );
+  const [newIntervalForStoringData, setNewIntervalForStoringData] =
+    useState(null);
 
   const handleRegionChange = (region) => {
-    // Assuming that a higher latitudeDelta implies a higher zoom level
     const newZoomLevel = Math.log2(360 / region.latitudeDelta);
     setZoomLevel(newZoomLevel);
   };
@@ -91,6 +96,7 @@ const MapScreen = ({ navigation }) => {
       setFullDrivingData((prevData) => [...prevData, data]);
     }
   };
+
   const _subscribe = () => {
     Accelerometer.setUpdateInterval(UPDATE_TIME);
 
@@ -152,13 +158,67 @@ const MapScreen = ({ navigation }) => {
 
   const fetchRoutes = async (routeCoords) => {
     try {
+      let cumulativeDuration = 0;
       const routePromises = routeCoords.slice(0, -1).map((start, index) => {
         const end = routeCoords[index + 1];
         return fetchDirections(start, end);
       });
+
       const allRouteSegments = await Promise.all(routePromises);
-      const allRouteCoordinates = allRouteSegments.flat(); // Combine all route segments into one array
+
+      const allRouteCoordinatesWithETA = [];
+
+      for (const segment of allRouteSegments) {
+        const { routePointsWithEta, totalDuration } = segment;
+
+        // Adjust cumulativeEta by adding the cumulativeDuration
+        const adjustedRoutePoints = routePointsWithEta.map((point) => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          cumulativeEta: point.cumulativeEta + cumulativeDuration,
+        }));
+
+        allRouteCoordinatesWithETA.push(...adjustedRoutePoints);
+
+        cumulativeDuration += totalDuration;
+      }
+
+      // Extract only the latitude and longitude for the polyline
+      const allRouteCoordinates = allRouteCoordinatesWithETA.map(
+        ({ latitude, longitude }) => ({
+          latitude,
+          longitude,
+        })
+      );
+
+      // Get the last cumultaive ETA:
+      const lastPoint =
+        allRouteCoordinatesWithETA[allRouteCoordinatesWithETA.length - 1];
+      const fitMapToCoordinates = (coordinates) => {
+        if (coordinates.length === 0) {
+          return;
+        }
+
+        const minLat = Math.min(...coordinates.map((c) => c.latitude));
+        const maxLat = Math.max(...coordinates.map((c) => c.latitude));
+        const minLng = Math.min(...coordinates.map((c) => c.longitude));
+        const maxLng = Math.max(...coordinates.map((c) => c.longitude));
+
+        const newRegion = {
+          latitude: (minLat + maxLat) / 2,
+          longitude: (minLng + maxLng) / 2,
+          latitudeDelta: (maxLat - minLat) * 1.2 || 0.005,
+          longitudeDelta: (maxLng - minLng) * 1.2 || 0.005,
+        };
+
+        setRegion(newRegion);
+      };
+
+      // Update state variables
+      setRouteCoordinatesWithETA(allRouteCoordinatesWithETA);
       setRouteCoordinates(allRouteCoordinates);
+
+      // Fit the map to the coordinates
       fitMapToCoordinates(allRouteCoordinates);
     } catch (error) {
       console.error("Error fetching routes:", error);
@@ -167,25 +227,84 @@ const MapScreen = ({ navigation }) => {
 
   const fetch50Routes = async (routeCoords) => {
     try {
+      let cumulativeDuration = 0;
       const routePromises = routeCoords.slice(0, -1).map((start, index) => {
         const end = routeCoords[index + 1];
         return fetchDirections(start, end);
       });
+
       const allRouteSegments = await Promise.all(routePromises);
-      const allRouteCoordinates = allRouteSegments.flat(); // Combine all route segments into one array
+
+      const allRouteCoordinatesWithETA = [];
+
+      for (const segment of allRouteSegments) {
+        const { routePointsWithEta, totalDuration } = segment;
+
+        // Adjust cumulativeEta by adding the cumulativeDuration
+        const adjustedRoutePoints = routePointsWithEta.map((point) => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          cumulativeEta: point.cumulativeEta + cumulativeDuration,
+        }));
+
+        allRouteCoordinatesWithETA.push(...adjustedRoutePoints);
+
+        cumulativeDuration += totalDuration;
+      }
+
+      // Extract only the latitude and longitude for the polyline
+      const allRouteCoordinates = allRouteCoordinatesWithETA.map(
+        ({ latitude, longitude }) => ({
+          latitude,
+          longitude,
+        })
+      );
+
+      // Update state variables
+      setRoute50CoordinatesWithETA(allRouteCoordinatesWithETA);
       setRoute50Coordinates(allRouteCoordinates);
     } catch (error) {
       console.error("Error fetching routes:", error);
     }
   };
+
   const fetch75Routes = async (routeCoords) => {
     try {
+      let cumulativeDuration = 0;
       const routePromises = routeCoords.slice(0, -1).map((start, index) => {
         const end = routeCoords[index + 1];
         return fetchDirections(start, end);
       });
+
       const allRouteSegments = await Promise.all(routePromises);
-      const allRouteCoordinates = allRouteSegments.flat(); // Combine all route segments into one array
+
+      const allRouteCoordinatesWithETA = [];
+
+      for (const segment of allRouteSegments) {
+        const { routePointsWithEta, totalDuration } = segment;
+
+        // Adjust cumulativeEta by adding the cumulativeDuration
+        const adjustedRoutePoints = routePointsWithEta.map((point) => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          cumulativeEta: point.cumulativeEta + cumulativeDuration,
+        }));
+
+        allRouteCoordinatesWithETA.push(...adjustedRoutePoints);
+
+        cumulativeDuration += totalDuration;
+      }
+
+      // Extract only the latitude and longitude for the polyline
+      const allRouteCoordinates = allRouteCoordinatesWithETA.map(
+        ({ latitude, longitude }) => ({
+          latitude,
+          longitude,
+        })
+      );
+
+      // Update state variables
+      setRoute75CoordinatesWithETA(allRouteCoordinatesWithETA);
       setRoute75Coordinates(allRouteCoordinates);
     } catch (error) {
       console.error("Error fetching routes:", error);
@@ -200,12 +319,54 @@ const MapScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (data.routes.length > 0) {
-        return decodePolyline(data.routes[0].overview_polyline.points);
+        const route = data.routes[0];
+        const legs = route.legs;
+
+        let cumulativeDuration = 0;
+        let routePointsWithEta = [];
+
+        for (const leg of legs) {
+          const steps = leg.steps;
+
+          for (const step of steps) {
+            const stepDuration = step.duration.value; // in seconds
+            const stepPolyline = decodePolyline(step.polyline.points);
+
+            const numPoints = stepPolyline.length;
+
+            for (let i = 0; i < numPoints; i++) {
+              const point = stepPolyline[i];
+              const pointEta =
+                cumulativeDuration + (stepDuration * i) / numPoints;
+
+              routePointsWithEta.push({
+                latitude: point.latitude,
+                longitude: point.longitude,
+                cumulativeEta: pointEta,
+              });
+            }
+
+            cumulativeDuration += stepDuration;
+          }
+        }
+
+        const totalDuration = cumulativeDuration;
+
+        return {
+          routePointsWithEta,
+          totalDuration,
+        };
       }
-      return [];
+      return {
+        routePointsWithEta: [],
+        totalDuration: 0,
+      };
     } catch (error) {
       console.error("Error fetching directions:", error);
-      return [];
+      return {
+        routePointsWithEta: [],
+        totalDuration: 0,
+      };
     }
   };
 
@@ -226,8 +387,6 @@ const MapScreen = ({ navigation }) => {
           latitudeDelta: prevRegion.latitudeDelta, // Preserve the zoom level
           longitudeDelta: prevRegion.longitudeDelta, // Preserve the zoom level
         }));
-
-        const speedInMph = (speed * 2.236).toFixed(0);
 
         if (speed >= 0) {
           const speedInMph = (speed * 2.23694).toFixed(0); // Convert from meters/second to mph
@@ -255,14 +414,13 @@ const MapScreen = ({ navigation }) => {
         latitudeDelta: LATITUDE_DELTA / 40, // Adjust delta for zoom level
         longitudeDelta: LONGITUDE_DELTA / 40,
       });
-      // Subscribe to accelerometer updates
       _subscribe();
 
       const id = setInterval(() => {
         storeData();
-      }, 100);
+      }, 1000);
       startPingSpeedLimit();
-      setIntervalId(id); // Save the interval ID to clear it later
+      setNewIntervalForStoringData(id); // Save the interval ID to clear it later
     }
   };
 
@@ -272,6 +430,11 @@ const MapScreen = ({ navigation }) => {
     if (intervalId) {
       clearInterval(intervalId); // Clear data collection interval
       setIntervalId(null); // Reset the interval ID
+    }
+
+    if (newIntervalForStoringData) {
+      clearInterval(newIntervalForStoringData); // Clear data collection interval
+      setNewIntervalForStoringData(null); // Reset the interval ID
     }
 
     let speedLimitStuff = evaluateSpeedData();
@@ -325,22 +488,6 @@ const MapScreen = ({ navigation }) => {
     }
 
     return points;
-  };
-
-  const fitMapToCoordinates = (coordinates) => {
-    const minLat = Math.min(...coordinates.map((c) => c.latitude));
-    const maxLat = Math.max(...coordinates.map((c) => c.latitude));
-    const minLng = Math.min(...coordinates.map((c) => c.longitude));
-    const maxLng = Math.max(...coordinates.map((c) => c.longitude));
-
-    const newRegion = {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
-      latitudeDelta: (maxLat - minLat) * 1.2,
-      longitudeDelta: (maxLng - minLng) * 1.2,
-    };
-
-    setRegion(newRegion);
   };
 
   const getDangerColor = () => {
@@ -454,7 +601,6 @@ const MapScreen = ({ navigation }) => {
       const nextData = data[i + 1];
 
       const currentMilesOver = currentData.milesOver;
-      const nextMilesOver = nextData.milesOver;
 
       const currentTime = new Date(currentData.timeStamp);
       const nextTime = new Date(nextData.timeStamp);
@@ -521,6 +667,21 @@ const MapScreen = ({ navigation }) => {
     fetchAccidents();
   }, []);
 
+  // Expected ETAS:
+  console.log("Expected ETAs:");
+  console.log(
+    "hotpink - most efficent",
+    routeCoordinatesWithETA[routeCoordinatesWithETA.length - 1]
+  );
+  console.log(
+    "blue - 50% efficent",
+    route50CoordinatesWithETA[route50CoordinatesWithETA.length - 1]
+  );
+  console.log(
+    "green - 75% efficent",
+    route75CoordinatesWithETA[route75CoordinatesWithETA.length - 1]
+  );
+
   return (
     <View style={styles.container}>
       {isLoading && (
@@ -585,7 +746,6 @@ const MapScreen = ({ navigation }) => {
         {reportedAccidents.length > 0 &&
           reportedAccidents &&
           reportedAccidents.map((coord, index) => {
-            console.log("coord", coord);
             return (
               <Marker
                 key={index}
@@ -947,7 +1107,7 @@ const styles = StyleSheet.create({
   blueDot: {
     width: 15,
     height: 15,
-    backgroundColor: "red",
+    backgroundColor: "blue",
     borderRadius: 100, // Half of the width and height to make it a circle
     borderWidth: 1,
     borderColor: "#fff",

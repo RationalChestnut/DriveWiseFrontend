@@ -40,7 +40,6 @@ export const addAccident = async (lat, long) => {
 export const getAccidents = async () => {
   try {
     const res = await axios.get("http://localhost:5001/location");
-    console.log(res.data);
     return res.data;
   } catch (error) {
     return null;
