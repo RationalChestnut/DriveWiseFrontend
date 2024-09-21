@@ -2,7 +2,7 @@ import axios from "axios";
 import { createToast } from "../components/Toast.component";
 
 const API_KEY = "4ETKUW0L7hQbCL0cHaNPBgJKSbM9UhVd";
-const route = "http://localhost:5001";
+const route = "https://drivewisebackend-7b2ac3916433.herokuapp.com";
 
 export const getSpeedLimitData = async (lat, long) => {
   try {

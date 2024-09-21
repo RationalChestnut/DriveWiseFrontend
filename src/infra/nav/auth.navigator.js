@@ -5,14 +5,11 @@ import MapScreen from "../../pages/Home/Home.page";
 import ProfileScreen from "../../pages/Profile/ProfileScreen.page";
 import { FontAwesome } from "@expo/vector-icons";
 import { Summary } from "../../pages/Summary/Summary.page";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { Chat } from "../../pages/Chat/Chat.page";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const TopTab = createMaterialTopTabNavigator();
 
-// Stack Navigator for Home and Summary Screens
 const HomeNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -22,7 +19,6 @@ const HomeNavigator = () => {
   );
 };
 
-// Authenticated Navigator (Bottom Tab Navigator)
 export const AuthenticatedNavigator = () => {
   const TAB_ICON = {
     Home: "home",

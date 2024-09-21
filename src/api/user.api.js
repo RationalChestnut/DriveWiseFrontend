@@ -1,6 +1,7 @@
 import axios from "axios";
-// const route = "https://drivewise-f0093f7b9daa.herokuapp.com";
-const route = "http://localhost:5001";
+const route = "https://drivewisebackend-7b2ac3916433.herokuapp.com";
+
+// const route = "http://localhost:5001";
 
 export const createUser = async (userId) => {
   try {
