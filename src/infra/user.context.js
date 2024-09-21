@@ -8,10 +8,10 @@ export function UserContextProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const { user } = useContext(AuthenticationContext);
 
-  //   const getUserData = async () => {
-  //     const data = await getUserDataReq(user?.uid || user);
-  //     setUserData(data);
-  //   };
+  // const getUserData = async () => {
+  //   const data = await getUserDataReq(user?.uid || user);
+  //   setUserData(data);
+  // };
 
   return (
     <UserContext.Provider

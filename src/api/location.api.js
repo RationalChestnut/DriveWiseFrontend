@@ -2,6 +2,7 @@ import axios from "axios";
 import { createToast } from "../components/Toast.component";
 
 const API_KEY = "4ETKUW0L7hQbCL0cHaNPBgJKSbM9UhVd";
+const route = "http://localhost:5001";
 
 export const getSpeedLimitData = async (lat, long) => {
   try {
@@ -25,7 +26,7 @@ export const getSpeedLimitData = async (lat, long) => {
 
 export const addAccident = async (lat, long) => {
   try {
-    const res = await axios.post("http://localhost:5001/location/save", {
+    const res = await axios.post(`${route}/location/save`, {
       lat,
       long,
     });
@@ -39,7 +40,7 @@ export const addAccident = async (lat, long) => {
 
 export const getAccidents = async () => {
   try {
-    const res = await axios.get("http://localhost:5001/location");
+    const res = await axios.get(`${route}/location`);
     return res.data;
   } catch (error) {
     return null;

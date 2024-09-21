@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   StyleSheet,
   View,
@@ -33,6 +33,8 @@ import {
   UpperRow,
 } from "./Home.styles";
 import { addAccident, getAccidents } from "../../api/location.api";
+import { getUserData } from "../../api/user.api";
+import { AuthenticationContext } from "../../infra/auth.context";
 
 const { width, height } = Dimensions.get("window");
 const ASPECT_RATIO = width / height;
@@ -97,6 +99,17 @@ const MapScreen = ({ navigation }) => {
   const [getRoute75DangerScore, setGetRoute75DangerScore] = useState(null);
   const [getRoute50DangerScore, setGetRoute50DangerScore] = useState(null);
   const [numberOfSuddenBrakes, setNumberOfSuddenBrakes] = useState(0);
+  const [userDrivingLevel, setUserDrivingLevel] = useState(0);
+  const { user } = useContext(AuthenticationContext);
+
+  const getUserDataReq = async () => {
+    try {
+      const res = await getUserData(user);
+      setUserDrivingLevel(res?.drivingLevel || res?.driving_score / 1000 || 0);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const handleRegionChange = (region) => {
     const newZoomLevel = Math.log2(360 / region.latitudeDelta);
@@ -139,6 +152,7 @@ const MapScreen = ({ navigation }) => {
 
   useEffect(() => {
     _subscribe();
+    getUserDataReq();
     return () => _unsubscribe();
   }, []);
 
@@ -514,18 +528,11 @@ const MapScreen = ({ navigation }) => {
     return points;
   };
 
-  const getDangerColor = () => {
-    if (dangerScore !== null) {
-      if (dangerScore <= 150) return "green";
-      else if (dangerScore <= 320) return "yellow";
-      else return "red";
-    }
-    return "gray";
-  };
-
   const handleSetRoute = async () => {
     try {
       if (startLocation && endLocation) {
+        // This should vary based on the driver skill level - userDrivingLevel
+
         const getRoute = await axios.post("http://127.0.0.1:5000/routes", {
           start_lat: currentLocation.latitude,
           start_long: currentLocation.longitude,
@@ -538,14 +545,33 @@ const MapScreen = ({ navigation }) => {
           start_long: currentLocation.longitude,
           end_lat: endLocation.latitude,
           end_long: endLocation.longitude,
-          driver_skill: 0.75,
+          driver_skill: userDrivingLevel,
         });
+
+        function adjustDrivingLevel(userDrivingLevel) {
+          // If the driving level is not between 0.4 and 0.6, set it to 0.5
+          if (userDrivingLevel < 0.4 || userDrivingLevel > 0.6) {
+            return 0.5;
+          }
+
+          // If the driving level is between 0.4 and 0.6, adjust accordingly
+          if (
+            Math.abs(userDrivingLevel - 0.4) < Math.abs(userDrivingLevel - 0.6)
+          ) {
+            // If closer to 0.4, set it to 0.3
+            return 0.3;
+          } else {
+            // If closer to 0.6, set it to 0.7
+            return 0.7;
+          }
+        }
+
         const get50Route = await axios.post("http://127.0.0.1:5000/routes", {
           start_lat: currentLocation.latitude,
           start_long: currentLocation.longitude,
           end_lat: endLocation.latitude,
           end_long: endLocation.longitude,
-          driver_skill: 0.5,
+          driver_skill: adjustDrivingLevel(userDrivingLevel - 0.1),
         });
 
         setDangerScore(getRoute.data.metrics[0].danger_score);

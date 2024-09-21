@@ -1,5 +1,6 @@
 import axios from "axios";
-const route = "https://drivewise-f0093f7b9daa.herokuapp.com";
+// const route = "https://drivewise-f0093f7b9daa.herokuapp.com";
+const route = "http://localhost:5001";
 
 export const createUser = async (userId) => {
   try {
@@ -37,6 +38,17 @@ export const addSkillReq = async (skill, userId) => {
   try {
     const res = await axios.post(`${route}/user/addSkill`, {
       skill,
+      userId,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const updateDrivingLevelReq = async (drivingLevel, userId) => {
+  try {
+    const res = await axios.post(`${route}/user/updateDrivingLevel`, {
+      drivingLevel,
       userId,
     });
   } catch (error) {

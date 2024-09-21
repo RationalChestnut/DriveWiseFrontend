@@ -17,8 +17,8 @@ import { AuthenticationContext } from "../../infra/auth.context";
 import ConfettiCannon from "react-native-confetti-cannon"; // Confetti for celebration
 import { getUserData, addSkillReq } from "../../api/user.api";
 import Slider from "@react-native-community/slider";
+import { updateDrivingLevelReq } from "../../api/user.api";
 const MAX_CHAR_LIMIT = 20; // Character limit for skills
-
 const ProfileScreen = () => {
   const { user, logOut } = useContext(AuthenticationContext); // Fetch user context and logOut function
   const [profileData, setProfileData] = useState(null);
@@ -27,6 +27,10 @@ const ProfileScreen = () => {
   const [newSkill, setNewSkill] = useState("");
   const [difficulty, setDifficulty] = useState(0.5);
   const [celebrate, setCelebrate] = useState(false); // For confetti
+
+  const changeLevelBasedOnSlider = async () => {
+    await updateDrivingLevelReq(parseFloat(difficulty.toFixed(1)), user);
+  };
 
   const determineLevel = (score) => {
     if (score <= 300) return "Beginner";
@@ -214,8 +218,9 @@ const ProfileScreen = () => {
             minimumValue={0}
             maximumValue={1}
             step={0.1}
-            value={difficulty}
-            onValueChange={(value) => setDifficulty(value)}
+            value={driving_score / 1000}
+            onValueChange={setDifficulty} // Update difficulty while sliding
+            onSlidingComplete={changeLevelBasedOnSlider} // Only send the request after sliding is complete
             minimumTrackTintColor="#4CAF50"
             maximumTrackTintColor="#d3d3d3"
             thumbTintColor="#4CAF50"
