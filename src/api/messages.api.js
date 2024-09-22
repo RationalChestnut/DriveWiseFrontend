@@ -1,6 +1,6 @@
 import axios from "axios";
-// const route = "https://drivewisebackend-7b2ac3916433.herokuapp.com";
-const route = "http://localhost:5001";
+const route = "https://drivewisebackend-7b2ac3916433.herokuapp.com";
+// const route = "http://localhost:5001";
 
 export const sendMessage = async (message, history) => {
   try {
