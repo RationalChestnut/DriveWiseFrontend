@@ -89,7 +89,6 @@ export const Chat = ({ navigation, route }) => {
       setChatHistory((previousMessages) =>
         GiftedChat.append(previousMessages, [newMessageFromBot])
       );
-      console.log(chatHistory);
     } catch (error) {
       console.log(error);
     } finally {
@@ -121,6 +120,7 @@ export const Chat = ({ navigation, route }) => {
     <ChatPageContainer
       style={{
         paddingBottom: !isKeyboardVisible && insets.bottom,
+        paddingTop: insets.top,
       }}
     >
       <GiftedChat
