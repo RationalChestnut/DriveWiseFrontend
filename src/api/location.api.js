@@ -30,6 +30,14 @@ export const addAccident = async (lat, long) => {
       lat,
       long,
     });
+
+    await axios.post(
+      "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//accident",
+      {
+        lat,
+        long,
+      }
+    );
     createToast("success", "Accident reported successfully");
     return res.data;
   } catch (error) {

@@ -20,7 +20,6 @@ import axios from "axios";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { getSpeedLimitData } from "../../api/location.api";
 import {
-  Container,
   Label,
   ReportAccidentText,
   ReportContainer,
@@ -43,8 +42,8 @@ const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 const UPDATE_TIME = 100;
 
 const initialRegion = {
-  latitude: 42.3581,
-  longitude: -71.0964,
+  latitude: 39.9522,
+  longitude: -75.1932,
   latitudeDelta: LATITUDE_DELTA,
   longitudeDelta: LONGITUDE_DELTA,
 };
@@ -463,7 +462,6 @@ const MapScreen = ({ navigation }) => {
 
   const handleEndRoute = () => {
     setIsActiveRoute(false);
-    sendDataToBackend(fullDrivingData); // Send data to backend if needed
     if (intervalId) {
       clearInterval(intervalId); // Clear data collection interval
       setIntervalId(null); // Reset the interval ID
@@ -530,23 +528,30 @@ const MapScreen = ({ navigation }) => {
 
   const handleSetRoute = async () => {
     try {
+      setIsLoading(true);
       if (startLocation && endLocation) {
         // This should vary based on the driver skill level - userDrivingLevel
 
-        const getRoute = await axios.post("http://127.0.0.1:5000/routes", {
-          start_lat: currentLocation.latitude,
-          start_long: currentLocation.longitude,
-          end_lat: endLocation.latitude,
-          end_long: endLocation.longitude,
-          driver_skill: 1,
-        });
-        const get75Route = await axios.post("http://127.0.0.1:5000/routes", {
-          start_lat: currentLocation.latitude,
-          start_long: currentLocation.longitude,
-          end_lat: endLocation.latitude,
-          end_long: endLocation.longitude,
-          driver_skill: userDrivingLevel,
-        });
+        const getRoute = await axios.post(
+          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          {
+            start_lat: currentLocation.latitude,
+            start_long: currentLocation.longitude,
+            end_lat: endLocation.latitude,
+            end_long: endLocation.longitude,
+            driver_skill: 1,
+          }
+        );
+        const get75Route = await axios.post(
+          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          {
+            start_lat: currentLocation.latitude,
+            start_long: currentLocation.longitude,
+            end_lat: endLocation.latitude,
+            end_long: endLocation.longitude,
+            driver_skill: userDrivingLevel,
+          }
+        );
 
         function adjustDrivingLevel(userDrivingLevel) {
           // If the driving level is not between 0.4 and 0.6, set it to 0.5
@@ -566,13 +571,16 @@ const MapScreen = ({ navigation }) => {
           }
         }
 
-        const get50Route = await axios.post("http://127.0.0.1:5000/routes", {
-          start_lat: currentLocation.latitude,
-          start_long: currentLocation.longitude,
-          end_lat: endLocation.latitude,
-          end_long: endLocation.longitude,
-          driver_skill: adjustDrivingLevel(userDrivingLevel - 0.1),
-        });
+        const get50Route = await axios.post(
+          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          {
+            start_lat: currentLocation.latitude,
+            start_long: currentLocation.longitude,
+            end_lat: endLocation.latitude,
+            end_long: endLocation.longitude,
+            driver_skill: adjustDrivingLevel(userDrivingLevel - 0.1),
+          }
+        );
 
         setDangerScore(getRoute.data.metrics[0].danger_score);
         setGetRoute75DangerScore(get75Route.data.metrics[0].danger_score);
@@ -602,16 +610,8 @@ const MapScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.log(error);
-    }
-  };
-
-  const sendDataToBackend = async (data) => {
-    try {
-      const res = await axios.post("http://127.0.0.1:5000/accel", {
-        data: data,
-      });
-    } catch (error) {
-      console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
