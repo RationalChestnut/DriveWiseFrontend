@@ -20,8 +20,9 @@ import { heightPercentageToDP } from "react-native-responsive-screen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { LoadingMessage } from "../../components/LoadingMessage/LoadingMessage.component";
-import { sendMessage } from "../../api/messages.api";
+import { sendMessage, sendYashMessage } from "../../api/messages.api";
 
+let counter = 0;
 export const Chat = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const [chatHistory, setChatHistory] = useState(() => {
@@ -76,7 +77,15 @@ export const Chat = ({ navigation, route }) => {
         chat = uuid.v4();
         setChatId(chat);
       }
-      const receivedMessage = await sendMessage(msg, chatHistory);
+      let receivedMessage = 0;
+      if (counter % 2 == 0) {
+        receivedMessage = await sendYashMessage(msg);
+        counter++;
+      } else {
+        receivedMessage = await sendMessage(msg, chatHistory);
+        counter++;
+      }
+
       const newMessageFromBot = {
         _id: message[0]._id + 1,
         text: receivedMessage,

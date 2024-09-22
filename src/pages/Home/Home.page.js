@@ -533,7 +533,7 @@ const MapScreen = ({ navigation }) => {
         // This should vary based on the driver skill level - userDrivingLevel
 
         const getRoute = await axios.post(
-          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          "https://4b87-2600-1700-1a33-3190-ba85-84ff-feb2-f84a.ngrok-free.app/routes",
           {
             start_lat: currentLocation.latitude,
             start_long: currentLocation.longitude,
@@ -543,7 +543,7 @@ const MapScreen = ({ navigation }) => {
           }
         );
         const get75Route = await axios.post(
-          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          "https://4b87-2600-1700-1a33-3190-ba85-84ff-feb2-f84a.ngrok-free.app/routes",
           {
             start_lat: currentLocation.latitude,
             start_long: currentLocation.longitude,
@@ -572,7 +572,7 @@ const MapScreen = ({ navigation }) => {
         }
 
         const get50Route = await axios.post(
-          "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//routes",
+          "https://4b87-2600-1700-1a33-3190-ba85-84ff-feb2-f84a.ngrok-free.app/routes",
           {
             start_lat: currentLocation.latitude,
             start_long: currentLocation.longitude,

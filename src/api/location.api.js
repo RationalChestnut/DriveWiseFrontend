@@ -32,7 +32,7 @@ export const addAccident = async (lat, long) => {
     });
 
     await axios.post(
-      "https://3e6e-2607-f470-34-2301-440b-24c2-6a3d-8b72.ngrok-free.app//accident",
+      "https://4b87-2600-1700-1a33-3190-ba85-84ff-feb2-f84a.ngrok-free.app/accident",
       {
         lat,
         long,
