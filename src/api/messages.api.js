@@ -17,7 +17,7 @@ export const sendMessage = async (message, history) => {
 export const sendYashMessage = async (message) => {
   try {
     console.log("Run");
-    const res = await axios.post(`http://localhost:5001/message/yash`, {
+    const res = await axios.post(`${route}/message/yash`, {
       message,
     });
     return res.data.response;
